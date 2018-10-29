@@ -106,23 +106,7 @@ void InitWeb (void) {
   sendATcommand("AT+CSOCKSETPN=1");
   sendATcommand("AT+CIPMODE=1");
 
-/*  for (uint8_t i=0; i<5; i++) {
-      if (sendATcommand("AT+CHTTPSSTART", "OK",10000) == true) {
-          break;
-      }
-      else {
-          sendATcommand("AT+CHTTPSSTOP", "OK",1000);
-          delay(1000);
-      }
-  } */
-
-  // need to wait for netopen
-//  delay(10000);      // Otherwise MqttOpen() fails
-// PROBLEM SOLVED BY WAITING FOR NETOPEN RESPONSE
-
   StartMqtt();
- //   MqttPublish("monash/water/sensorA", "some data");
-
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -176,7 +160,6 @@ void liveBufferRead() {
                 else {
                     Serial.print(byteToHexStr(ch));
                 }
-        //        Serial.print(buffer);   // send echo
             }
             pos = 0;                // reset to start of buffer
         }
@@ -194,7 +177,6 @@ uint8_t ReadSim5320 (bool print /*= false*/) {
             delay(1);
         }
         else {
- //delay(1);
             char ch = gRxMsg[len - 1];
             if ((ch>=32) && (ch<=127)) {
                 Serial.write(ch);
@@ -210,17 +192,6 @@ uint8_t ReadSim5320 (bool print /*= false*/) {
     return len;
 }
 
-///////////////////////////////////////////////////////////////////////////
-/*void loop (void) {
-    while (Serial.available()) {
-        Serial.print((char)Serial.peek());
-        Sim5320.write((char)Serial.read());
-    }
-    while (Sim5320.available()) {
-        Serial.print((char)Sim5320.read());
-    }
-}
-*/
 ///////////////////////////////////////////////////////////////////////////
 bool CheckOk (void) {
     ReadSim5320(gDebug);

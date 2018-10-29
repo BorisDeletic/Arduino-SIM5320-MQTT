@@ -18,7 +18,6 @@ bool StartMqtt (void) {
       Serial.println(i);
       delay(3000);
       if (MqttOpen(MQTT_BROKER, MQTT_PORT) == true) {
-    //      Serial.println("THIS IS I" + String(i));
           delay(3000);
           for (int p=0; p<5; p++) {
               if (MqttConnect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD) == true) {  // NOTE: this has to be unique for every client
