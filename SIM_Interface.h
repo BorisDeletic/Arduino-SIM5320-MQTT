@@ -1,6 +1,21 @@
+class SimInterface
+{
+	public:
+		SimInterface(const int simSerialRX, const int simSerialTX, const int simPowerPin);
+		bool sendATcommand(String cmd, String expected, unsigned int timeout, bool openTCP);
+		void InitSim5320 (void);
+		void InitWeb (void);
+		String byteToHexStr (const uint8_t value, const String prefix /*= "\\x"*/);
+		uint8_t ReadSim5320 (bool print /*= false*/);
+		bool CheckOk (void);
+		bool verifyResponse(const char MQTT_ACK);
+	private:
+
+}
+
 ///////////////////////////////////////////////////////////////////////////
 bool sendATcommand(String cmd, String expected, unsigned int timeout, bool openTCP) {
-    if (gDebug == true) {
+    if (_gDebug == true) {
         Serial.print("Tx: ");
         Serial.println(cmd);
     }
@@ -9,7 +24,7 @@ bool sendATcommand(String cmd, String expected, unsigned int timeout, bool openT
 
     while (Sim5320.available() > 0) {
         char a = Sim5320.read();      // Clean the input buffer
-    }
+    } 
 
     if (cmd.length() > 0) {
         Sim5320.println(cmd);         // Send the AT command
@@ -30,7 +45,7 @@ bool sendATcommand(String cmd, String expected, unsigned int timeout, bool openT
                 // <CR><LF> (aka '\n\r', aka end-of-line) received
                 //
 
-                if (gDebug == true) {
+                if (_gDebug == true) {
                     Serial.print("Rx: ");
                     Serial.print(gRxMsg);
                 }
@@ -127,47 +142,6 @@ String byteToHexStr (const uint8_t value, const String prefix /*= "\\x"*/) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-void dumpHex(const uint8_t* const byteArray, const uint8_t len) {
-    for (uint8_t i=0; i<len; ++i) {
-        Serial.print(byteToHexStr(byteArray[i], "0x") + " ");
-    }
-    Serial.println();
-}
-
-///////////////////////////////////////////////////////////////////////////
-void liveBufferRead() {
-    static char buffer[256];
-    static size_t pos;              // position of next write
-
-    while (true) { //make this a timed affair so
-      while (Sim5320.available() && pos < sizeof buffer - 1) {
-
-        // Read incoming byte.
-        char c = Sim5320.read();
-        buffer[pos++] = c;
-
-        // Echo received message.
-        if (c == '!') {            // \n means "end of message"
-            buffer[pos] = '\0';     // terminate the buffer
-            for (int i = 0; i < pos; i++) {
-                char ch = buffer[i];
-                if ((ch>=32) && (ch<=127)) {
-                    Serial.write(ch);
-                }
-                else if ((ch == CR) || (ch == LF)) {
-                    Serial.write(ch);
-                }
-                else {
-                    Serial.print(byteToHexStr(ch));
-                }
-            }
-            pos = 0;                // reset to start of buffer
-        }
-      }
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////
 uint8_t ReadSim5320 (bool print /*= false*/) {
     uint8_t len = 0;
     memset(gRxMsg, '\0', sizeof(gRxMsg));    // Initialize the string
@@ -194,6 +168,21 @@ uint8_t ReadSim5320 (bool print /*= false*/) {
 
 ///////////////////////////////////////////////////////////////////////////
 bool CheckOk (void) {
-    ReadSim5320(gDebug);
+    ReadSim5320(_gDebug);
     return strstr(gRxMsg, "OK\r\n");
+}
+
+///////////////////////////////////////////////////////////////////////////
+bool SimMQTT::verifyResponse(const char MQTT_ACK) {
+  bool retVal = false;
+  CheckOk(); // prime buffer
+  
+  delay(10000); // wait for server to respond to sim
+  uint8_t len = ReadSim5320(true);
+ // Serial.print(String("len-2: ") + byteToHexStr(gRxMsg[len-2]) + String("  len-1") + byteToHexStr(gRxMsg[len-1]));
+  if ((gRxMsg[len-2] == MQTT_ACK || gRxMsg[len-4] == MQTT_ACK || gRxMsg[len-5] == MQTT_ACK ) && (gRxMsg[len-1] == 0x00 || gRxMsg[len-1] == 0x01)) {
+    Serial.println("Rx: ACKNOWLEDGED");
+    retVal = true;
+  }
+  return retVal;
 }

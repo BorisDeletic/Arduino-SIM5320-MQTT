@@ -1,5 +1,52 @@
+/*
+  MQTT_Protocol.h - Library for MQTT protocol on SIM5320.
+  Created by Boris Deletic, October 30, 2018.
+  Released into the public domain.
+*/
+#include "Arduino.h"
+#include "SimMQTT.h"
+
+#define MQTT_MSG_CONNECT        0x10
+#define MQTT_MSG_CONNACK        0x20
+#define MQTT_MSG_PUBLISH        0x30
+#define MQTT_SUBSCRIBE          0x82
+#define MQTT_SUBACK             0x90
+#define MQTT_PINGREQ            0xc0
+#define MQTT_PINGRESP           0xd0
+
 //////////////////////////////////////////////////////////////////////////
-void genRandomID(char *s, const int len) {
+SimMQTT::SimMQTT(const int simSerialRX, const int simSerialTX, const int simPowerPin) {
+	
+	// Note on Sim900 baud rates. The unit defaults to 115200 but I have
+    // found it to be unreliable. To change baud rate, issue 'AT+IPREX=115200'
+    // or similar (change the baud rate number). After this command the sketch
+    // cannot communicate with the Sim5320 any more. Change the next line to
+    // match the new baud rate and restart.
+    //
+    // If echoing commands from the Serial to Sim5320 and vv (see looop()), it
+    // is best if the two baud rates are identical.
+    Sim5320.begin(19200);
+	_gDebug = false;
+	
+	
+	
+}
+
+void SimMQTT::setLogging(HardwareSerial &refSer, bool verbosity) {
+	refSer.begin(cBaudRate);
+	if (verbosity) {
+		refSer.println("Enabled logging");
+		_gDebug = true;
+	} else {
+		refSer.println("Disabled logging");
+		_gDebug = false;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// Generate random client ID, pass in char array to be modified
+void SimMQTT::genRandomID(char *s, const int len) {
     static const char alphanum[] =
         "012346789"
         "ABCDEFGHIJKLMNOPQRSTUVWYZ"
@@ -12,63 +59,34 @@ void genRandomID(char *s, const int len) {
     s[len] = 0;
 }
 
-//////////////////////////////////////////////////////////////////////////
-bool StartMqtt (void) {
-  for (int i=0; i<5; i++) {
-      Serial.println(i);
-      delay(3000);
-      if (MqttOpen(MQTT_BROKER, MQTT_PORT) == true) {
-          delay(3000);
-          for (int p=0; p<5; p++) {
-              if (MqttConnect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD) == true) {  // NOTE: this has to be unique for every client
-                  delay(3000);
-                  for (int n=0; n<5; n++) {
-                      if (MqttSubscribe(SENSOR_LISTEN_CH) == true) {
-                            return true;
-                      }
-                  }
-              }
-          }
-      }
-  }
-  return false;
-}
-
 ///////////////////////////////////////////////////////////////////////////
-bool MqttOpen (const char* const brokerUrl, const char* const brokerPort) {
-    bool gDebug = true;
+bool SimMQTT::MqttOpen (const char* const brokerUrl, const char* const brokerPort) {
+    bool _gDebug = true;
     String cmd = String("AT+CIPOPEN=0,\"TCP\",\"") + brokerUrl + "\"," + brokerPort;
     for (int n=0; n=5; n++) {
         delay(500);
-    //    sendATcommand(cmd, "+CIPOPEN:", 10000);
-    //    ;
         if (sendATcommand(cmd, "OK", 10000)) {
-      //  if (strstr(gRxMsg, "") != nullptr) {
           delay(1000);
-          ReadSim5320(gDebug);
+          ReadSim5320(_gDebug);
           return true;
         }
         else {
           if (sendATcommand(cmd, "OK", 10000)) {
               delay(1000);
-              ReadSim5320(gDebug);
+              ReadSim5320(_gDebug);
               return true;
           } else {
-             // sendATcommand("AT+NETCLOSE");
-            //  sendATcommand("AT+NETOPEN", "+NETOPEN", 10000, true);
               sendATcommand("AT+CIPCLOSE=0", "OK", 10000);
           }
         }
-       // gDebug = false;
     }
-    gDebug = false;
+    _gDebug = false;
     return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////
-bool MqttConnect (const char* clientId, const char* username, const char* password) {
+bool SimMQTT::MqttConnect (const char* clientId, const char* username = '', const char* password = '') {
 
-   // Serial.println(clientId);
     //
     // See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html for details
     //
@@ -121,31 +139,37 @@ bool MqttConnect (const char* clientId, const char* username, const char* passwo
     
     delay(1000);
     // Prepare command
-    Serial.println("Tx: MQTT_CONNECT");
+	if (_gDebug) {
+		refSer.println("Tx: MQTT_CONNECT");
+	}
+    
     String cmd = "AT+CIPSEND=0,";
     cmd += mqttMessageLength;
     cmd += CR;
 
     // Send command
-    ReadSim5320(gDebug);              // clear rx buffer
+    ReadSim5320(_gDebug);              // clear rx buffer
     Sim5320.print(cmd);
     delay(100);
     // Send message
     for (int i=0; i<mqttMessageLength; i++) {
         Sim5320.write(mqttMessage[i]); // Message contents
-        Serial.print(byteToHexStr(mqttMessage[i]));
+		if (_gDebug) {
+			refSer.print(byteToHexStr(mqttMessage[i]));
+			refSer.println();
+		}
+        
     }
 
     // Check if send was successful
   delay(100);
 
   bool retVal = verifyResponse(MQTT_MSG_CONNACK);
-  Serial.println();
   return retVal;
 }
 
 //////////////////////////////////////////////////////////////////////////
-bool MqttSubscribe (const char* const topic) {
+bool SimMQTT::MqttSubscribe (const char* const topic) {
   bool retVal = false;
 
   uint8_t lenTopic = strlen(topic);
@@ -171,22 +195,24 @@ bool MqttSubscribe (const char* const topic) {
 
   // Write QoS
   mqttMessage[written++] = 1;
-
-  Serial.println("Tx: MQTT_SUBSCRIBE");
+  
+  if (_gDebug) {
+	refSer.println("Tx: MQTT_SUBSCRIBE");
+  }
+  
   String cmd = "AT+CIPSEND=0,";
   cmd += written;
   cmd += CR;
 
   // Send command
-  ReadSim5320(gDebug);              // clear rx buffer
-  Serial.println("--------");
+  ReadSim5320(_gDebug);              // clear rx buffer
   Sim5320.print(cmd);
   //uint8_t fie = ReadSim5320(true);
   delay(100);
   // Send message
   for (int i=0; i<written; i++) {
       Sim5320.write(mqttMessage[i]); // Message contents
-     // Serial.print(byteToHexStr(mqttMessage[i]));
+     // refSer.print(byteToHexStr(mqttMessage[i]));
   }
  
   delay(100);
@@ -194,13 +220,10 @@ bool MqttSubscribe (const char* const topic) {
   retVal = verifyResponse(MQTT_SUBACK);
 
   return retVal;
-  Serial.println();
- 
-  Serial.println();
 }
 
 ///////////////////////////////////////////////////////////////////////////
-bool MqttPublish (const char* const topic, const char* const msg) {
+bool SimMQTT::MqttPublish (const char* const topic, const char* const msg) {
     bool retVal = true;
 
     uint8_t lenTopic = strlen(topic);
@@ -226,13 +249,16 @@ bool MqttPublish (const char* const topic, const char* const msg) {
 
 
     // Prepare command
-    Serial.println("Tx: MQTT_PUBLISH");
+	if (_gDebug) {
+		refSer.println("Tx: MQTT_PUBLISH");
+	}
+    
     String cmd = "AT+CIPSEND=0,";
     cmd += written;
     cmd += CR;
 
     // Send command
-    ReadSim5320(gDebug);              // clear rx buffer
+    ReadSim5320(_gDebug);              // clear rx buffer
     Sim5320.print(cmd);
     delay(20);
     // Send message
@@ -243,13 +269,16 @@ bool MqttPublish (const char* const topic, const char* const msg) {
     // Check if send was successful
     delay(100);
     retVal = CheckOk();
-    if (retVal == false) Serial.println(String("[ERROR] Publish failed") + gRxMsg);
+    if ((retVal == false) && (_gDebug == true)) {
+		refSer.println(String("[ERROR] Publish failed") + gRxMsg);
+	}
+		
 
     return retVal;
 }
 
 ///////////////////////////////////////////////////////////////////////////
-bool MqttPingreq() {
+bool SimMQTT::MqttPingreq() {
   delay(1000);
 
   bool retVal = false;
@@ -261,13 +290,16 @@ bool MqttPingreq() {
   mqttMessage[written++] = MQTT_PINGREQ;
   mqttMessage[written++] = 0;
 
-  Serial.println("Tx: MQTT_PINGREQ");
+  if (_gDebug) {
+		refSer.println("Tx: MQTT_PINGREQ");
+  }
+  
   String cmd = "AT+CIPSEND=0,";
   cmd += written;
   cmd += CR;
 
   // Send command
-  ReadSim5320(gDebug);              // clear rx buffer
+  ReadSim5320(_gDebug);              // clear rx buffer
   Sim5320.print(cmd);
   //uint8_t fie = ReadSim5320(true);
   delay(100);
@@ -281,23 +313,4 @@ bool MqttPingreq() {
   retVal = verifyResponse(MQTT_PINGRESP);
   return retVal;
   
-  Serial.println();
 }
-
-////////////////////////////////////////////////////////////
-bool verifyResponse(const char MQTT_ACK) {
-  bool retVal = false;
-  CheckOk(); // prime buffer
-  
-  delay(10000); // wait for server to respond to sim
-  uint8_t len = ReadSim5320(true);
- // Serial.print(String("len-2: ") + byteToHexStr(gRxMsg[len-2]) + String("  len-1") + byteToHexStr(gRxMsg[len-1]));
-  if ((gRxMsg[len-2] == MQTT_ACK || gRxMsg[len-4] == MQTT_ACK || gRxMsg[len-5] == MQTT_ACK ) && (gRxMsg[len-1] == 0x00 || gRxMsg[len-1] == 0x01)) {
-    Serial.println("Rx: ACKNOWLEDGED");
-    retVal = true;
-  }
-  return retVal;
-}
-
-/////////////////////////////////////////////////////////////////
-
