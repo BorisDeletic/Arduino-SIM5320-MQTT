@@ -1,17 +1,22 @@
 # Arduino-SIM5320-MQTT
 An arduino library for communication with 3G SIM5320 chipset, and implementation of MQTT protocol using AT commands
 
-## Usage
+## Currently work in progress
+Current version of .cpp library is not working.
+
+Use .ino files for working version with modifications required.
+
+Working version of .cpp library coming soon
 
 
-## MQTT_Protocol.ino 
+## Functions 
 Contains functions for basic MQTT actions.
 
 MQTT Open:
 Opens TCP port on SIM5320 at given url and port. Must be called first before other functions are used.
 
 MQTT Connect:
-Connects to broker by sending CONNECT action and verifies connection by listening for CONNACK response.
+Connects to broker with username and password, and verifies connection by listening for CONNACK response.
 
 MQTT Subscribe:
 Subscribes to a specified topic using SUBSCRIBE action and verifies subscription by listening for SUBACK response.
