@@ -1,12 +1,10 @@
 # Arduino-SIM5320-MQTT
 An arduino library for communication with 3G SIM5320 chipset, and implementation of MQTT protocol using AT commands
 
-## Currently work in progress
-Current version of .cpp library is not working.
+## Usage
+See example1.ino for usage example
 
-Use .ino files for working version with modifications required.
-
-Working version of .cpp library coming soon
+Note: Receiving messages from broker on subscribed topics is still under development. Coming shortly with examples.
 
 
 ## Functions 
