@@ -19,11 +19,11 @@
 #define LF                      '\n'        // 0x0A
 
 //////////////////////////////////////////////////////////////////////////
-SimMQTT::SimMQTT(const int simSerialRX, const int simSerialTX, const int powerPin) : 
+SimMQTT::SimMQTT(const int simSerialRX, const int simSerialTX, const int powerPin, String network, String IP) : 
 	_gDebug(false), 
 	logSer(nullptr),
 	Sim5320(simSerialRX, simSerialTX),
-	interface(&Sim5320, powerPin)
+	interface(&Sim5320, powerPin, network, IP)
 	{
 	
 	// Note on Sim900 baud rates. The unit defaults to 115200 but I have

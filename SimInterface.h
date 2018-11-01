@@ -14,7 +14,7 @@
 class SimInterface
 {
 	public:
-		SimInterface(SoftwareSerial* pntSim, const int simPowerPin);
+		SimInterface(SoftwareSerial* pntSim, const int simPowerPin, String provider, String IP);
 		bool sendATcommand(String cmd, String expected = "OK", unsigned int timeout = 1000, bool openTCP = false);
 		bool CheckOk (void);
 		bool verifyResponse(const char MQTT_ACK);
@@ -22,6 +22,8 @@ class SimInterface
 		String byteToHexStr (const uint8_t value, const String prefix = " 0x");
 		uint8_t ReadSim5320 (bool print /*= false*/);
 	private:
+		String network;
+		String netIP;
 		char gRxMsg[150];
 		void InitSim5320 (void);
 		void InitWeb (void);

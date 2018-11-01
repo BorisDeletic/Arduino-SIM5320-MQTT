@@ -10,11 +10,13 @@
 #include <Sim5320MQTT.h>
 
 
-SimInterface::SimInterface(SoftwareSerial* pntSim, const int simPowerPin) :
+SimInterface::SimInterface(SoftwareSerial* pntSim, const int simPowerPin, String provider, String IP) :
 	_gDebug(false),
 	logSer(nullptr),
 	powerPin(simPowerPin),
-	Sim5320(pntSim)
+	Sim5320(pntSim),
+	network(provider),
+	netIP(IP)
 	{
 
 }
@@ -132,9 +134,35 @@ void SimInterface::InitSim5320 (void) {
 
         sendATcommand("", "PB DONE", 10000);
     }
-    sendATcommand("AT+CGDCONT=1,\"IP\",\"yesinternet\",\"0.0.0.0\"");
+	
+	
+	// Sequence of AT commands for setting up networking and TCP ports.
+	// See AT Command manual for SIM5320 for more details
+	//
+	// http://www.mt-system.ru/sites/default/files/simcom_sim5320_atc_en_v1.23.pdf
+	//
+	String CGDCONT1 = "AT+CGDCONT=1,\"IP\",\"";
+	//provider
+	String CGDCONT2 = "\",\"";
+	//netIP
+	String CGDCONT3 = "\"";
+	
+	
+	String CGDCONT  = CGDCONT1 + network + CGDCONT2 + netIP + CGDCONT3;
+	
+    sendATcommand(CGDCONT);  
     sendATcommand("AT+NETOPEN", "+NETOPEN", 10000, true);
-    sendATcommand("AT+CTCPKA=1,5,5", "OK");
+    sendATcommand("AT+CTCPKA=1,5,5", "OK");  //keep alive timeout 
+	
+	String CGSOCK1 = "AT+CGSOCKCONT=1,\"IP\",\"";
+	// provider
+	String CGSOCK2 = "\"";
+	
+	String CGSOCK  = CGSOCK1 + network + CGSOCK2;
+	
+	sendATcommand(CGSOCK);
+    sendATcommand("AT+CSOCKSETPN=1");
+    sendATcommand("AT+CIPMODE=1");
     
 	if (_gDebug) {
 	    logSer->println("InitSim5320 done");
@@ -145,9 +173,7 @@ void SimInterface::InitSim5320 (void) {
 
 ///////////////////////////////////////////////////////////////////////////
 void SimInterface::InitWeb (void) {
-  sendATcommand("AT+CGSOCKCONT=1,\"IP\",\"yesinternet\"");
-  sendATcommand("AT+CSOCKSETPN=1");
-  sendATcommand("AT+CIPMODE=1");
+
 
 }
 
