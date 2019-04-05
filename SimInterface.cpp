@@ -18,8 +18,13 @@ SimInterface::SimInterface(SoftwareSerial* pntSim, const int simPowerPin, String
 	network(provider),
 	netIP(IP)
 	{
-
+	InitSim5320();
 }
+
+//SimInterface::sleepMode() {
+	
+//}
+
 
 
 void SimInterface::setLogging(Stream* pntSer, bool verbosity) {
