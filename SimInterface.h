@@ -21,12 +21,12 @@ class SimInterface
 		void setLogging(Stream* pntSer, bool verbosity);
 		String byteToHexStr (const uint8_t value, const String prefix = " 0x");
 		uint8_t ReadSim5320 (bool print /*= false*/);
+		void InitSim5320 (void);
+		void InitWeb (void);
 	private:
 		String network;
 		String netIP;
 		char gRxMsg[150];
-		void InitSim5320 (void);
-		void InitWeb (void);
 		const int powerPin;
 		bool _gDebug;
 		Stream* logSer;

@@ -72,6 +72,10 @@ void SimMQTT::genRandomID(char *s, const int len) {
 
 ///////////////////////////////////////////////////////////////////////////
 bool SimMQTT::MqttOpen (const char* const brokerUrl, const char* const brokerPort) {
+	
+	interface.InitSim5320();
+	interface.InitWeb();
+	
     String cmd = String("AT+CIPOPEN=0,\"TCP\",\"") + brokerUrl + "\"," + brokerPort;
     for (int n=0; n=5; n++) {
         delay(500);
