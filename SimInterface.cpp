@@ -18,7 +18,6 @@ SimInterface::SimInterface(SoftwareSerial* pntSim, const int simPowerPin, String
 	network(provider),
 	netIP(IP)
 	{
-	InitSim5320();
 }
 
 //SimInterface::sleepMode() {
