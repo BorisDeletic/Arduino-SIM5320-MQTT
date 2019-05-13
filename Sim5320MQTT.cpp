@@ -32,7 +32,7 @@ SimMQTT::SimMQTT(const int simSerialRX, const int simSerialTX, const int powerPi
     // cannot communicate with the Sim5320 any more. Change the next line to
     // match the new baud rate and restart.
     //
-    // If echoing commands from the Serial to Sim5320 and vv (see looop()), it
+    // If echoing commands from the Serial to Sim5320 and vv (see loop()), it
     // is best if the two baud rates are identical.
 //	Sim5320(simSerialRX, simSerialTX);
     Sim5320.begin(19200);
